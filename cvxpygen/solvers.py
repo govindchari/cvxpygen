@@ -1119,11 +1119,14 @@ class QOCOGENInterface(SolverInterface):
     stgs_enabled = [True, True, True, True, True, True, True, True, True, True]
     stgs_defaults = ['200', '5', '1', '1e-8', '1e-8', '1e-7', '1e-7', '1e-5', '1e-5', '0']
 
-    # dual variables split into y and z vectors
-    # dual_var_split = True
-    # dual_var_names = ['y', 'z']
+    # Clarabel hack.
+    # Super hacky. y and z in qoco are stored back to back, so to index into z, we index into &y + some_int to access indices out of bounds in y but indices in z.
     dual_var_split = False
-    dual_var_names = ['z']
+    dual_var_names = ['y']
+
+    # dual variables split into y and z vectors
+    # dual_var_split = False
+    # dual_var_names = ['z']
 
     # docu
     docu = 'https://qoco-org.github.io/qoco/codegen/index.html'
