@@ -43,15 +43,27 @@ def generate_code(problem, code_dir='CPG_code', solver=None, solver_opts=None,
     create_folder_structure(code_dir)
 
     # problem data
-    data, solving_chain, inverse_data = problem.get_problem_data(
-        solver=solver,
-        gp=False,
-        enforce_dpp=True,
-        verbose=False,
-        solver_opts=solver_opts
-    )
+    if solver == 'QOCOGEN':
+        data, solving_chain, inverse_data = problem.get_problem_data(
+            solver="CLARABEL",
+            gp=False,
+            enforce_dpp=True,
+            verbose=False,
+            solver_opts=solver_opts
+        )
+    else:
+        data, solving_chain, inverse_data = problem.get_problem_data(
+            solver=solver,
+            gp=False,
+            enforce_dpp=True,
+            verbose=False,
+            solver_opts=solver_opts
+        )
     param_prob = data['param_prob']
-    solver_name = solving_chain.solver.name()
+    if solver == "QOCOGEN":
+        solver_name = solver
+    else:
+        solver_name = solving_chain.solver.name()
     interface_class, cvxpy_interface_class = get_interface_class(solver_name)
 
     # configuration
