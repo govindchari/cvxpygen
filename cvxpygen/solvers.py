@@ -1112,7 +1112,7 @@ class QOCOGENInterface(SolverInterface):
     stgs_reset_function = None
     stgs_names = ['max_iters', 'bisect_iters', 'iter_ref_iters', 'kkt_static_reg', 'kkt_dynamic_reg',
                       'abstol', 'reltol', 'abstol_inacc', 'reltol_inacc', 'verbose']
-    stgs_types = ['cpg_float', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_int']
+    stgs_types = ['cpg_int', 'cpg_int', 'cpg_int', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_float', 'cpg_int']
     stgs_enabled = [True, True, True, True, True, True, True, True, True, True]
     stgs_defaults = ['200', '5', '1', '1e-8', '1e-8', '1e-7', '1e-7', '1e-5', '1e-5', '0']
 
@@ -1145,8 +1145,8 @@ class QOCOGENInterface(SolverInterface):
             'PAbcGh': ParameterUpdateLogic(
                 update_pending_logic=UpdatePendingLogic(['A', 'b', 'G', 'P'], '||', ['c', 'h']),
                 function_call=f'{{prefix}}cpg_copy_all();\n'
-                            f'    ECOS_updateData({{prefix}}ecos_workspace, {{prefix}}Canon_Params_conditioning.G->x, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->x"}'
-                            f', {{prefix}}Canon_Params_conditioning.c, {{prefix}}Canon_Params_conditioning.h, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.b"})'
+                            # f'      ECOS_updateData({{prefix}}ecos_workspace, {{prefix}}Canon_Params_conditioning.G->x, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->x"}'
+                            # f', {{prefix}}Canon_Params_conditioning.c, {{prefix}}Canon_Params_conditioning.h, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.b"})'
             ),
             'c': ParameterUpdateLogic(
                 update_pending_logic=UpdatePendingLogic(['c']),
