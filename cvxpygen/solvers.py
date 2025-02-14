@@ -1201,16 +1201,13 @@ class QOCOGENInterface(SolverInterface):
 
         # adjust setup.py
         indent = ' ' * 30
-        # setup_replacements = [
-        #     ("os.path.join('c', 'solver_code', 'include'),",
-        #     "os.path.join('c', 'solver_code', 'include'),\n" +
-        #     indent + "os.path.join('c', 'solver_code', 'external', 'SuiteSparse_config'),\n" +
-        #     indent + "os.path.join('c', 'solver_code', 'external', 'amd', 'include'),\n" +
-        #     indent + "os.path.join('c', 'solver_code', 'external', 'ldl', 'include'),"),
-        #     ("license='BSD 3-Clause'")
-        # ]
-        # read_write_file(os.path.join(code_dir, 'setup.py'),
-        #                 lambda x: multiple_replace(x, setup_replacements))
+        setup_replacements = [
+            ("os.path.join('c', 'solver_code', 'include'),",
+            "os.path.join('c', 'solver_code'),"),
+            ("license='Apache 2.0'", "license='BSD 3-Clause'")
+        ]
+        read_write_file(os.path.join(code_dir, 'setup.py'),
+                        lambda x: multiple_replace(x, setup_replacements))
 
 
     def declare_workspace(self, f, prefix, parameter_canon) -> None:
