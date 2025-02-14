@@ -1147,14 +1147,11 @@ class QOCOGENInterface(SolverInterface):
                            'q': np.array(p_prob.cone_dims.soc)}
 
         self.parameter_update_structure = {
-            # 'init': ParameterUpdateLogic(
-            #     update_pending_logic=UpdatePendingLogic([], extra_condition=extra_condition, functions_if_false=update_after_init),
-            #     function_call= \
-            #         f'{{prefix}}cpg_copy_all();\n'
-            #         f'    clarabel_CscMatrix_init(&{{prefix}}P, {canon_constants["n"]}, {canon_constants["n"]}, {P_p}, {P_i}, {P_x});\n'
-            #         f'    clarabel_CscMatrix_init(&{{prefix}}A, {canon_constants["m"]}, {canon_constants["n"]}, {{prefix}}Canon_Params_conditioning.A->p, {{prefix}}Canon_Params_conditioning.A->i, {{prefix}}Canon_Params_conditioning.A->x);\n' \
-            #         f'    {{prefix}}settings = clarabel_DefaultSettings_default()'
-            # ),
+            'init': ParameterUpdateLogic(
+                update_pending_logic=UpdatePendingLogic([], extra_condition='{prefix}qoco_custom_workspace.n <= 0', functions_if_false=None),
+                function_call=f'{{prefix}}cpg_copy_all();\n'
+                            f'    {{prefix}}load_data(&qoco_custom_workspace)'
+            ),
             # 'A': ParameterUpdateLogic(
             #     update_pending_logic = UpdatePendingLogic(['A']),
             #     function_call = f'{{prefix}}cpg_copy_A();\n      clarabel_CscMatrix_init(&{{prefix}}A, {canon_constants["m"]}, {canon_constants["n"]}, {{prefix}}Canon_Params_conditioning.A->p, {{prefix}}Canon_Params_conditioning.A->i, {{prefix}}Canon_Params_conditioning.A->x)'
