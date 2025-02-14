@@ -1070,10 +1070,13 @@ class ClarabelInterface(SolverInterface):
         f.write(f'ClarabelDefaultSolution {prefix}solution;\n')
 
 class QOCOGENInterface(SolverInterface):
+    # Hacks to use clarabel interface
     solver_name = 'QOCOGEN'
     solver_type = 'conic'
-    canon_p_ids = ['P', 'c', 'd', 'A', 'b', 'G', 'h']
-    canon_p_ids_constr_vec = ['b', 'h']
+    # canon_p_ids = ['P', 'c', 'd', 'A', 'b', 'G', 'h']
+    # canon_p_ids_constr_vec = ['b', 'h']
+    canon_p_ids = ['P', 'q', 'd', 'A', 'b']
+    canon_p_ids_constr_vec = ['b']
     solve_function_call = '{prefix}qoco_custom_solve({prefix}&qoco_custom_workspace)'
 
     # header files
@@ -1117,16 +1120,23 @@ class QOCOGENInterface(SolverInterface):
     stgs_defaults = ['200', '5', '1', '1e-8', '1e-8', '1e-7', '1e-7', '1e-5', '1e-5', '0']
 
     # dual variables split into y and z vectors
-    dual_var_split = True
-    dual_var_names = ['y', 'z']
+    # dual_var_split = True
+    # dual_var_names = ['y', 'z']
+    dual_var_split = False
+    dual_var_names = ['z']
 
     # docu
     docu = 'https://qoco-org.github.io/qoco/codegen/index.html'
 
     def __init__(self, data, p_prob, enable_settings):
         n_var = p_prob.x.size
-        n_eq = p_prob.cone_dims.zero
-        n_ineq = data['A'].shape[0] - n_eq
+
+        # Clarabel hack
+        n_eq = data['A'].shape[0]
+        n_ineq = 0
+
+        # n_eq = p_prob.cone_dims.zero
+        # n_ineq = data['A'].shape[0] - n_eq
 
         indices_obj, indptr_obj, shape_obj = self.get_problem_data_index(p_prob.reduced_P)
         indices_constr, indptr_constr, shape_constr = self.get_problem_data_index(p_prob.reduced_A)
@@ -1137,27 +1147,26 @@ class QOCOGENInterface(SolverInterface):
                            'q': np.array(p_prob.cone_dims.soc)}
 
         self.parameter_update_structure = {
-            'init': ParameterUpdateLogic(
-                update_pending_logic=UpdatePendingLogic([], extra_condition='qoco_custom_workspace.n <= 0', functions_if_false=['PAbcGh']),
-                function_call=f'{{prefix}}cpg_copy_all();\n'
-                            f'    {{prefix}}load_data(&qoco_custom_workspace)'
-            ),
-            'PAbcGh': ParameterUpdateLogic(
-                update_pending_logic=UpdatePendingLogic(['A', 'b', 'G', 'P'], '||', ['c', 'h']),
-                function_call=f'{{prefix}}cpg_copy_all();\n'
-                            # f'      ECOS_updateData({{prefix}}ecos_workspace, {{prefix}}Canon_Params_conditioning.G->x, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->x"}'
-                            # f', {{prefix}}Canon_Params_conditioning.c, {{prefix}}Canon_Params_conditioning.h, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.b"})'
-            ),
-            'c': ParameterUpdateLogic(
-                update_pending_logic=UpdatePendingLogic(['c']),
-                function_call=f'{{prefix}}cpg_copy_c();\n'
-                            f'        for (i=0; i<{canon_constants["n"]}; i++) {{{{ ecos_updateDataEntry_c({{prefix}}ecos_workspace, i, {{prefix}}Canon_Params_conditioning.c[i]); }}}}'
-            ),
-            'h': ParameterUpdateLogic(
-                update_pending_logic=UpdatePendingLogic(['h']),
-                function_call=f'{{prefix}}cpg_copy_h();\n'
-                            f'        for (i=0; i<{canon_constants["m"]}; i++) {{{{ ecos_updateDataEntry_h({{prefix}}ecos_workspace, i, {{prefix}}Canon_Params_conditioning.h[i]); }}}}'
-            )
+            # 'init': ParameterUpdateLogic(
+            #     update_pending_logic=UpdatePendingLogic([], extra_condition=extra_condition, functions_if_false=update_after_init),
+            #     function_call= \
+            #         f'{{prefix}}cpg_copy_all();\n'
+            #         f'    clarabel_CscMatrix_init(&{{prefix}}P, {canon_constants["n"]}, {canon_constants["n"]}, {P_p}, {P_i}, {P_x});\n'
+            #         f'    clarabel_CscMatrix_init(&{{prefix}}A, {canon_constants["m"]}, {canon_constants["n"]}, {{prefix}}Canon_Params_conditioning.A->p, {{prefix}}Canon_Params_conditioning.A->i, {{prefix}}Canon_Params_conditioning.A->x);\n' \
+            #         f'    {{prefix}}settings = clarabel_DefaultSettings_default()'
+            # ),
+            # 'A': ParameterUpdateLogic(
+            #     update_pending_logic = UpdatePendingLogic(['A']),
+            #     function_call = f'{{prefix}}cpg_copy_A();\n      clarabel_CscMatrix_init(&{{prefix}}A, {canon_constants["m"]}, {canon_constants["n"]}, {{prefix}}Canon_Params_conditioning.A->p, {{prefix}}Canon_Params_conditioning.A->i, {{prefix}}Canon_Params_conditioning.A->x)'
+            # ),
+            # 'q': ParameterUpdateLogic(
+            #     update_pending_logic = UpdatePendingLogic(['q']),
+            #     function_call = f'{{prefix}}cpg_copy_q()'
+            # ),
+            # 'b': ParameterUpdateLogic(
+            #     update_pending_logic = UpdatePendingLogic(['b']),
+            #     function_call = f'{{prefix}}cpg_copy_b()'
+            # ),
         }
 
         super().__init__(self.solver_name, n_var, n_eq, n_ineq, indices_obj, indptr_obj, shape_obj,
@@ -1183,9 +1192,19 @@ class QOCOGENInterface(SolverInterface):
         from sys import platform
 
         # Generate qoco_custom
-        qocogen.generate_solver(self.canon_constants['n'], self.canon_constants['m'], self.canon_constants['p'], parameter_canon.p_csc['P'], parameter_canon.p['c'],
-                    parameter_canon.p_csc['A'], parameter_canon.p['b'],
-                    parameter_canon.p_csc['G'], parameter_canon.p['h'], self.canon_constants['l'],
+
+        # Clarabel hacks. For clarabel, n_eq = shape(A)[0]
+        c = parameter_canon.p['q']
+        m = self.canon_constants['l'] + sum(self.canon_constants['q'])
+        p = self.n_eq - m
+        A = parameter_canon.p_csc['A'][0:p, :]
+        b = parameter_canon.p['b'][0:p]
+        G = parameter_canon.p_csc['A'][p::, :]
+        h = parameter_canon.p['b'][p::]
+
+        qocogen.generate_solver(self.canon_constants['n'], m, p, parameter_canon.p_csc['P'], c ,
+                    A, b,
+                    G, h, self.canon_constants['l'],
                     self.canon_constants['nsoc'], self.canon_constants['q'], os.path.join(code_dir, 'c'), "solver_code")
         
         # adjust top-level CMakeLists.txt
