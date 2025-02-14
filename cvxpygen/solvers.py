@@ -1074,7 +1074,7 @@ class QOCOGENInterface(SolverInterface):
     solver_type = 'conic'
     canon_p_ids = ['P', 'c', 'd', 'A', 'b', 'G', 'h']
     canon_p_ids_constr_vec = ['b', 'h']
-    solve_function_call = '{prefix}qoco_custom_solve({prefix}qoco_custom_workspace)'
+    solve_function_call = '{prefix}qoco_custom_solve({prefix}&qoco_custom_workspace)'
 
     # header files
     header_files = ['"qoco_custom.h"']
@@ -1085,7 +1085,7 @@ class QOCOGENInterface(SolverInterface):
     inmemory_preconditioning = True
 
     # workspace
-    ws_statically_allocated_in_solver_code = True
+    ws_statically_allocated_in_solver_code = False
     ws_ptrs = WorkspacePointerInfo(
         objective_value = 'qoco_custom_workspace.sol.obj',
         iterations = 'qoco_custom_workspace.sol.iters',
@@ -1138,21 +1138,14 @@ class QOCOGENInterface(SolverInterface):
 
         self.parameter_update_structure = {
             'init': ParameterUpdateLogic(
-                update_pending_logic=UpdatePendingLogic([], extra_condition='!{prefix}ecos_workspace', functions_if_false=['AbcGh']),
+                update_pending_logic=UpdatePendingLogic([], extra_condition='qoco_custom_workspace.n <= 0', functions_if_false=['PAbcGh']),
                 function_call=f'{{prefix}}cpg_copy_all();\n'
-                            f'    {{prefix}}ecos_workspace = ECOS_setup({canon_constants["n"]}, {canon_constants["m"]}, {canon_constants["p"]}, {canon_constants["l"]}, {canon_constants["nsoc"]}'
-                            f', {"0" if canon_constants["nsoc"] == 0 else "(int *) &{prefix}ecos_q"}'
-                            f', {{prefix}}Canon_Params_conditioning.G->x, {{prefix}}Canon_Params_conditioning.G->p, {{prefix}}Canon_Params_conditioning.G->i'
-                            f', {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->x"}'
-                            f', {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->p"}'
-                            f', {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->i"}'
-                            f', {{prefix}}Canon_Params_conditioning.c, {{prefix}}Canon_Params_conditioning.h'
-                            f', {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.b"})'
+                            f'    {{prefix}}load_data(&qoco_custom_workspace)'
             ),
-            'AbcGh': ParameterUpdateLogic(
-                update_pending_logic=UpdatePendingLogic(['A', 'b', 'G'], '||', ['c', 'h']),
+            'PAbcGh': ParameterUpdateLogic(
+                update_pending_logic=UpdatePendingLogic(['A', 'b', 'G', 'P'], '||', ['c', 'h']),
                 function_call=f'{{prefix}}cpg_copy_all();\n'
-                            f'      ECOS_updateData({{prefix}}ecos_workspace, {{prefix}}Canon_Params_conditioning.G->x, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->x"}'
+                            f'    ECOS_updateData({{prefix}}ecos_workspace, {{prefix}}Canon_Params_conditioning.G->x, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.A->x"}'
                             f', {{prefix}}Canon_Params_conditioning.c, {{prefix}}Canon_Params_conditioning.h, {"0" if canon_constants["p"] == 0 else "{prefix}Canon_Params_conditioning.b"})'
             ),
             'c': ParameterUpdateLogic(
@@ -1190,15 +1183,10 @@ class QOCOGENInterface(SolverInterface):
         from sys import platform
 
         # Generate qoco_custom
-        n = len(parameter_canon.p['c'])
-        m = len(parameter_canon.p['h'])
-        p = len(parameter_canon.p['b'])
-        breakpoint()
         qocogen.generate_solver(self.canon_constants['n'], self.canon_constants['m'], self.canon_constants['p'], parameter_canon.p_csc['P'], parameter_canon.p['c'],
                     parameter_canon.p_csc['A'], parameter_canon.p['b'],
                     parameter_canon.p_csc['G'], parameter_canon.p['h'], self.canon_constants['l'],
                     self.canon_constants['nsoc'], self.canon_constants['q'], os.path.join(code_dir, 'c'), "solver_code")
-        breakpoint()
         
         # adjust top-level CMakeLists.txt
         indent = ' ' * 6
@@ -1230,7 +1218,7 @@ class QOCOGENInterface(SolverInterface):
             f.write('\n// qoco_custom array of SOC dimensions\n')
             write_vec_prot(f, self.canon_constants['q'], f'{prefix}qoco_custom_q', 'cpg_int')
         f.write('\n// qoco_custom workspace\n')
-        f.write(f'extern Workspace {prefix}qoco_custom;\n')
+        f.write(f'extern Workspace {prefix}qoco_custom_workspace;\n')
         f.write('\n// qoco_custom exit flag\n')
         f.write(f'extern cpg_int {prefix}qoco_custom_flag;\n')
 
