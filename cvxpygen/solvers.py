@@ -1120,7 +1120,7 @@ class QOCOGENInterface(SolverInterface):
     stgs_defaults = ['200', '5', '1', '1e-8', '1e-8', '1e-7', '1e-7', '1e-5', '1e-5', '0']
 
     # Clarabel hack.
-    # Super hacky. y and z in qoco are stored back to back, so to index into z, we index into &y + some_int to access indices out of bounds in y but indices in z.
+    # Super hacky. y and z in qoco are stored back to back, so to index into z, we index into &y + some_int to access indices out of bounds in y but indices in z. This will def fail a memory sanitizer check.
     dual_var_split = False
     dual_var_names = ['y']
 
