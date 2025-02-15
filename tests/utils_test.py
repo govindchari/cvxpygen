@@ -28,6 +28,8 @@ def check(prob, solver, name, func_get_primal_vec, **extra_settings):
         val_py = prob.solve(solver='SCS', warm_start=False, verbose=False, **extra_settings)
     elif solver == 'CLARABEL':
         val_py = prob.solve(solver='CLARABEL', verbose=False, **extra_settings)
+    elif solver == 'QOCOGEN':
+        val_py = prob.solve(solver='CLARABEL', verbose=False, **extra_settings)
     else:
         val_py = prob.solve(solver=solver, **extra_settings)
     prim_py = func_get_primal_vec(prob, name)
